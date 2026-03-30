@@ -1,0 +1,67 @@
+name: Velo Oculto - Pipeline Diario
+
+on:
+  schedule:
+    - cron: '0 13 * * *'   # 8:00am Colombia (UTC-5)
+    - cron: '0 17 * * *'   # 12:00pm Colombia (UTC-5)
+    - cron: '0 22 * * *'   # 5:00pm Colombia (UTC-5)
+  workflow_dispatch:        # Permite correrlo manualmente desde GitHub
+
+jobs:
+  producir-y-subir:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write       # Para poder commitear el historial actualizado
+
+    steps:
+      - name: Checkout repositorio
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Instalar dependencias del sistema
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg imagemagick python3-pip python3-venv
+
+      - name: Habilitar fuentes en ImageMagick (necesario para subtítulos)
+        run: |
+          sudo sed -i 's/rights="none" pattern="PDF"/rights="read|write" pattern="PDF"/' /etc/ImageMagick-6/policy.xml || true
+          sudo sed -i 's/<policy domain="path" rights="none" pattern="@\*"\/>/<policy domain="path" rights="read|write" pattern="@*"\/>/' /etc/ImageMagick-6/policy.xml || true
+
+      - name: Configurar Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Instalar dependencias Python
+        run: pip install -r requirements.txt
+
+      - name: Crear archivos de credenciales
+        run: |
+          echo '${{ secrets.CLIENT_SECRET_JSON }}' > client_secret.json
+          echo '${{ secrets.TOKEN_JSON }}' > token.json
+          printf "GOOGLE_API_KEY=%s\nPIXABAY_API_KEY=%s\nPEXELS_API_KEY=%s\n" \
+            "${{ secrets.GOOGLE_API_KEY }}" \
+            "${{ secrets.PIXABAY_API_KEY }}" \
+            "${{ secrets.PEXELS_API_KEY }}" > .env
+          mkdir -p logs
+
+      - name: Correr pipeline completo
+        run: PYTHONUTF8=1 python main.py
+
+      - name: Guardar token actualizado (para el siguiente run)
+        run: |
+          if [ -f token.json ]; then
+            gh secret set TOKEN_JSON < token.json
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+
+      - name: Commitear historial actualizado
+        run: |
+          git config user.name "Velo Oculto Bot"
+          git config user.email "velooculto@bot.com"
+          git add data/historial.json
+          git diff --staged --quiet || git commit -m "historial: guion usado [skip ci]"
+          git push

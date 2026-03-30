@@ -1,3 +1,24 @@
 venv/
 .env
 __pycache__/
+
+# Credenciales sensibles
+client_secret.json
+token.json
+
+# Archivos generados
+audio_final.mp3
+datos_video.json
+reel_definitivo.mp4
+videos_stock/
+
+# Logs
+logs/
+
+# Node
+package-lock.json
+package.json
+
+# No ignorar la carpeta data (guiones e historial deben estar en el repo)
+!data/
+!data/*.json

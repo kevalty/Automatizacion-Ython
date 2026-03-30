@@ -11,16 +11,26 @@ console = Console()
 # ==============================================================================
 # 🔧 RUTAS
 # ==============================================================================
-possible_paths = [
+path_found = False
+
+# Windows
+windows_paths = [
     r"C:\Program Files\ImageMagick-7.1.2-Q16-HDRI\magick.exe",
     r"C:\Program Files\ImageMagick-7.1.1-Q16-HDRI\magick.exe"
 ]
-path_found = False
-for path in possible_paths:
+for path in windows_paths:
     if os.path.exists(path):
         change_settings({"IMAGEMAGICK_BINARY": path})
         path_found = True
         break
+
+# Linux
+if not path_found:
+    import shutil
+    linux_bin = shutil.which("convert") or shutil.which("magick")
+    if linux_bin:
+        change_settings({"IMAGEMAGICK_BINARY": linux_bin})
+        path_found = True
 
 AUDIO_PATH = "audio_final.mp3"
 VIDEO_FOLDER = "videos_stock"
@@ -93,7 +103,7 @@ def preparar_overlay_vhs(duracion_total):
         clip_overlay = clip_overlay.resize(height=1920)
         if clip_overlay.w < 1080: clip_overlay = clip_overlay.resize(width=1080)
     clip_overlay = clip_overlay.crop(x1=clip_overlay.w/2 - 540, width=1080, height=1920)
-    clip_overlay = vfx.loop(clip_overlay, duration=duracion_total)
+    clip_overlay = clip_overlay.fx(vfx.loop, duration=duracion_total)
     return clip_overlay.set_opacity(0.15)
 
 def limpiar_palabra(palabra):
@@ -136,7 +146,7 @@ def obtener_musica_fondo(duracion_video):
     canciones = [f for f in os.listdir(MUSIC_FOLDER) if f.endswith(".mp3")]
     if not canciones: return None
     musica = AudioFileClip(os.path.join(MUSIC_FOLDER, random.choice(canciones)))
-    if musica.duration < duracion_video: musica = vfx.loop(musica, duration=duracion_video)
+    if musica.duration < duracion_video: musica = musica.fx(vfx.audio_loop, duration=duracion_video)
     return musica.subclip(0, duracion_video).volumex(0.15)
 
 def editor_pro():

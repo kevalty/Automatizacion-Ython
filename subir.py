@@ -1,6 +1,5 @@
 import os
 import json
-import time
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -57,10 +56,17 @@ def subir_video():
         with open(METADATA_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
             titulo = data.get("titulo_video", titulo)
-            if len(titulo) > 95: titulo = titulo[:95] # Límite de seguridad
-            
-            # Descripción optimizada
-            descripcion = f"{data.get('texto_para_narrar', '')[:100]}...\n\n👇 SUSCRÍBETE AHORA 👇\n#Misterio #Shorts #ElVeloOculto #Terror #Curiosidades"
+            if len(titulo) > 95: titulo = titulo[:95]
+
+            # Usar descripción del guion si existe, si no generar una básica
+            if data.get("descripcion_youtube"):
+                descripcion = data["descripcion_youtube"]
+            else:
+                descripcion = f"{data.get('texto_para_narrar', '')[:100]}...\n\n👇 SUSCRÍBETE AHORA 👇\n#Misterio #Shorts #ElVeloOculto #Terror #Curiosidades"
+
+            # Usar tags del guion si existen
+            if data.get("tags"):
+                tags = data["tags"]
 
     console.print(f"📝 Título: [cyan]{titulo}[/cyan]")
     console.print(f"🌍 Estado: [bold green]PÚBLICO[/bold green]")
